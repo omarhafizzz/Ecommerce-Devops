@@ -147,6 +147,10 @@ pipeline {
                         kubectl apply -f k8s/04-postgres-deployment.yaml
                         kubectl apply -f k8s/05-backend-deployment.yaml
                         kubectl apply -f k8s/06-frontend-deployment.yaml
+                        kubectl wait --namespace ingress-nginx \
+                          --for=condition=ready pod \
+                          --selector=app.kubernetes.io/component=controller \
+                          --timeout=120s
                         kubectl apply -f k8s/07-ingress.yaml
 
                         # Update images to the new build
