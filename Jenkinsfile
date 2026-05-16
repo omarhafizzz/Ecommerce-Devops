@@ -147,11 +147,19 @@ pipeline {
                         kubectl apply -f k8s/04-postgres-deployment.yaml
                         kubectl apply -f k8s/05-backend-deployment.yaml
                         kubectl apply -f k8s/06-frontend-deployment.yaml
+                        # استنى الـ ingress controller
                         kubectl wait --namespace ingress-nginx \
                           --for=condition=ready pod \
                           --selector=app.kubernetes.io/component=controller \
-                          --timeout=120s
-                        kubectl apply -f k8s/07-ingress.yaml
+                          --timeout=300s
+
+                        # حاول تطبق الـ ingress وكرر لو فشل
+                        for i in 1 2 3; do
+                          kubectl apply -f k8s/07-ingress.yaml && break
+                          echo "Retry $i..."
+                          sleep 30
+                        done
+                        
 
                         # Update images to the new build
                         kubectl set image deployment/backend \
