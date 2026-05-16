@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seed-sql
+  namespace: ecommerce
+data:
+  seed.sql: |
+    INSERT INTO categories (name, slug, description, image) VALUES
+    ('Electronics', 'electronics', 'Latest gadgets and electronics', 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400'),
+    ('Clothing', 'clothing', 'Fashion and apparel', 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400'),
+    ('Home & Living', 'home-living', 'Furniture and home decor', 'https://images.unsplash.com/photo-1484101403633-562f891dc89a?w=400'),
+    ('Books', 'books', 'Books and literature', 'https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=400'),
+    ('Sports', 'sports', 'Sports and outdoor equipment', 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=400'),
+    ('Beauty', 'beauty', 'Beauty and personal care', 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400')
+    ON CONFLICT DO NOTHING;
+
+    INSERT INTO products (name, slug, description, price, compare_price, stock, images, category_id, featured, rating, review_count) VALUES
+    ('Sony WH-1000XM5 Headphones', 'sony-wh1000xm5', 'Industry-leading noise canceling. Up to 30-hour battery life.', 349.99, 399.99, 45, ARRAY['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600'], (SELECT id FROM categories WHERE slug='electronics'), true, 4.8, 256),
+    ('Mechanical Keyboard', 'mechanical-keyboard-4k', 'RGB backlit mechanical keyboard with Cherry MX switches.', 129.99, NULL, 60, ARRAY['https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600'], (SELECT id FROM categories WHERE slug='electronics'), true, 4.7, 134),
+    ('Premium Cotton T-Shirt', 'premium-cotton-tshirt', '100% organic cotton. Available in 12 colors.', 29.99, 39.99, 200, ARRAY['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600'], (SELECT id FROM categories WHERE slug='clothing'), false, 4.3, 445),
+    ('Leather Sneakers', 'leather-sneakers', 'Handcrafted genuine leather sneakers with cushioned insole.', 119.99, 149.99, 40, ARRAY['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600'], (SELECT id FROM categories WHERE slug='clothing'), true, 4.6, 312),
+    ('Minimalist Desk Lamp', 'minimalist-desk-lamp', 'Touch-dimming LED desk lamp with USB charging port.', 79.99, NULL, 75, ARRAY['https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=600'], (SELECT id FROM categories WHERE slug='home-living'), true, 4.5, 178),
+    ('Atomic Habits', 'atomic-habits-james-clear', 'The #1 New York Times bestseller by James Clear.', 18.99, 24.99, 150, ARRAY['https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=600'], (SELECT id FROM categories WHERE slug='books'), false, 4.9, 8921),
+    ('Yoga Mat Premium', 'yoga-mat-premium', 'Non-slip eco-friendly TPE yoga mat. 6mm thick.', 64.99, 84.99, 55, ARRAY['https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600'], (SELECT id FROM categories WHERE slug='sports'), true, 4.6, 567),
+    ('Vitamin C Serum', 'vitamin-c-serum', '20% Vitamin C + E + Ferulic Acid. Dermatologist tested.', 34.99, 44.99, 110, ARRAY['https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=600'], (SELECT id FROM categories WHERE slug='beauty'), true, 4.8, 1203)
+    ON CONFLICT DO NOTHING;
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  namespace: ecommerce
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed
+          image: postgres:16
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: POSTGRES_PASSWORD
+          command: ["psql", "-h", "postgres-service", "-U", "ecom_user", "-d", "ecommerce", "-f", "/seed/seed.sql"]
+          volumeMounts:
+            - name: seed-sql
+              mountPath: /seed
+      volumes:
+        - name: seed-sql
+          configMap:
+            name: seed-sql
