@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresdb
+  namespace: ecommerce
+  labels:
+    app: postgresdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresdb
+  template:
+    metadata:
+      labels:
+        app: postgresdb
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: ecommerce-secrets
+                  key: POSTGRES_DB
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d/init.sql
+              subPath: init.sql
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - ecom_user
+                - -d
+                - ecommerce
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - ecom_user
+                - -d
+                - ecommerce
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        - name: init-sql
+          configMap:
+            name: postgres-init-sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: ecommerce
+  labels:
+    app: postgresdb
+spec:
+  type: ClusterIP
+  selector:
+    app: postgresdb
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
