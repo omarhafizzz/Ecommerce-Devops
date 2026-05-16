@@ -53,8 +53,8 @@ pipeline {
             steps {
                 echo '>>> Building Backend and Frontend images...'
                 sh '''
-                    docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} -f Dockerfile.backend .
-                    docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} -f Dockerfile.frontend .
+                    docker build -t ${BACKEND_IMAGE}:${IMAGE_TAG} ./ecommerce/backend
+                    docker build -t ${FRONTEND_IMAGE}:${IMAGE_TAG} ./ecommerce/frontend
                 '''
             }
         }
