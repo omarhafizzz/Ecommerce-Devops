@@ -17,6 +17,7 @@ pipeline {
             steps {
                 echo '>>> Cloning repository...'
                 git branch: 'main',
+                    credentialsId: 'github-credentials',
                     url: 'https://github.com/omarhafizzz/ecommerce.git'
             }
         }
